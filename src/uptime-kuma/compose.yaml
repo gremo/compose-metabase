@@ -1,0 +1,29 @@
+services:
+    caddy:
+        image: lucaslorentz/caddy-docker-proxy
+        container_name: ${COMPOSE_PROJECT_NAME}-caddy
+        ports:
+            - 80:80
+            - 443:443
+            - 443:443/udp
+        volumes:
+            - caddy-data:/data
+            - /var/run/docker.sock:/var/run/docker.sock
+        restart: unless-stopped
+        depends_on:
+            uptime-kuma:
+                condition: service_healthy
+
+    uptime-kuma:
+        image: louislam/uptime-kuma
+        container_name: ${COMPOSE_PROJECT_NAME}-uptime-kuma
+        volumes:
+            - uptime-kuma:/app/data
+        restart: unless-stopped
+        labels:
+            caddy: ${DOMAIN:-localhost}
+            caddy.reverse_proxy: "{{upstreams 3001}}"
+
+volumes:
+    caddy-data:
+    uptime-kuma:

@@ -1,0 +1,49 @@
+services:
+    caddy:
+        image: lucaslorentz/caddy-docker-proxy
+        container_name: ${COMPOSE_PROJECT_NAME}-caddy
+        ports:
+            - 80:80
+            - 443:443
+            - 443:443/udp
+        volumes:
+            - caddy-data:/data
+            - /var/run/docker.sock:/var/run/docker.sock
+        restart: unless-stopped
+        depends_on:
+            - docuseal
+
+    docuseal:
+        image: docuseal/docuseal
+        container_name: ${COMPOSE_PROJECT_NAME}-docuseal
+        volumes:
+            - docuseal-data:/data
+        environment:
+            DATABASE_URL: postgresql://${DB_USER:-docuseal}:${DB_PASSWORD:?}@db:5432/${DB_NAME:-docuseal}
+        labels:
+            caddy: ${DOMAIN:-localhost}
+            caddy.reverse_proxy: "{{upstreams 3000}}"
+        restart: unless-stopped
+        depends_on:
+            db:
+                condition: service_healthy
+
+    db:
+        image: postgres
+        container_name: ${COMPOSE_PROJECT_NAME}-db
+        volumes:
+            - db-data:/var/lib/postgresql/data
+        environment:
+            POSTGRES_USER: ${DB_USER:-docuseal}
+            POSTGRES_PASSWORD: ${DB_PASSWORD:?}
+            POSTGRES_DB: ${DB_NAME:-docuseal}
+        healthcheck:
+            test: "pg_isready -U postgres"
+            interval: 10s
+            timeout: 5s
+            retries: 5
+
+volumes:
+    caddy-data:
+    db-data:
+    docuseal-data:

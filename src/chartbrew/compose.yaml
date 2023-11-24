@@ -1,0 +1,77 @@
+services:
+    caddy:
+        image: lucaslorentz/caddy-docker-proxy
+        container_name: ${COMPOSE_PROJECT_NAME}-caddy
+        ports:
+            - 80:80
+            - 443:443
+            - 443:443/udp
+        volumes:
+            - caddy-data:/data
+            - /var/run/docker.sock:/var/run/docker.sock
+        restart: unless-stopped
+        depends_on:
+            - chartbrew
+            - phpmyadmin
+
+    chartbrew:
+        image: razvanilin/chartbrew
+        container_name: ${COMPOSE_PROJECT_NAME}-chartbrew
+        ports:
+            - 4019:4019
+        volumes:
+            - .env:/code/.env
+        environment:
+            CB_SECRET: ${SECRET:?}
+            CB_API_HOST: 0.0.0.0
+            CB_API_PORT: 4019
+            REACT_APP_API_HOST: ${DOMAIN:-localhost}:4019
+            REACT_APP_CLIENT_HOST: ${DOMAIN:-localhost}
+            CB_DB_HOST: db
+            CB_DB_USERNAME: ${DB_USER:-chartbrew}
+            CB_DB_PASSWORD: ${DB_PASSWORD:?}
+            CB_DB_NAME: ${DB_NAME:-chartbrew}
+        labels:
+            caddy: ${DOMAIN:-localhost}
+            caddy.reverse_proxy: "{{upstreams 4018}}"
+        restart: unless-stopped
+        depends_on:
+            db:
+                condition: service_healthy
+
+    db:
+        image: mariadb
+        container_name: ${COMPOSE_PROJECT_NAME}-db
+        volumes:
+            - db-data:/var/lib/mysql
+        environment:
+            MARIADB_USER: ${DB_USER:-chartbrew}
+            MARIADB_PASSWORD: ${DB_PASSWORD:?}
+            MARIADB_RANDOM_ROOT_PASSWORD: true
+            MARIADB_DATABASE: ${DB_NAME:-chartbrew}
+        restart: unless-stopped
+        healthcheck:
+            test:
+                ["CMD", "/usr/local/bin/healthcheck.sh", "--innodb_initialized"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+
+    phpmyadmin:
+        image: phpmyadmin
+        container_name: ${COMPOSE_PROJECT_NAME}-phpmyadmin
+        environment:
+            PMA_HOST: db
+            PMA_ABSOLUTE_URI: http://${DOMAIN:-localhost}/phpmyadmin/
+        labels:
+            caddy: ${DOMAIN:-localhost}
+            caddy.redir: "/phpmyadmin /phpmyadmin/"
+            caddy.handle_path: /phpmyadmin/*
+            caddy.handle_path.reverse_proxy: "{{ upstreams 80 }}"
+        depends_on:
+            db:
+                condition: service_healthy
+
+volumes:
+    caddy-data:
+    db-data:

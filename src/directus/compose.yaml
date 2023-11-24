@@ -1,0 +1,78 @@
+services:
+    caddy:
+        image: lucaslorentz/caddy-docker-proxy
+        container_name: ${COMPOSE_PROJECT_NAME}-caddy
+        ports:
+            - 80:80
+            - 443:443
+            - 443:443/udp
+        volumes:
+            - caddy-data:/data
+            - /var/run/docker.sock:/var/run/docker.sock
+        restart: unless-stopped
+        depends_on:
+            - directus
+            - phpmyadmin
+
+    directus:
+        image: directus/directus
+        container_name: ${COMPOSE_PROJECT_NAME}-directus
+        volumes:
+            - .env:/directus/.env
+            - ./extensions:/directus/extensions
+            - ./uploads:/directus/uploads
+        environment:
+            KEY: ${KEY:?}
+            SECRET: ${SECRET:?}
+            ADMIN_EMAIL: ${ADMIN_EMAIL:?}
+            ADMIN_PASSWORD: ${ADMIN_PASSWORD:?}
+            DB_CLIENT: mysql
+            DB_HOST: db
+            DB_PORT: 3306
+            DB_USER: ${DB_USER:-directus}
+            DB_PASSWORD: ${DB_PASSWORD:?}
+            DB_DATABASE: ${DB_NAME:-directus}
+        labels:
+            caddy: ${DOMAIN:-localhost}
+            caddy.reverse_proxy: "{{upstreams 8055}}"
+        restart: unless-stopped
+        depends_on:
+            db:
+                condition: service_healthy
+
+    db:
+        image: mariadb
+        container_name: ${COMPOSE_PROJECT_NAME}-db
+        volumes:
+            - db-data:/var/lib/mysql
+        environment:
+            MARIADB_USER: ${DB_USER:-directus}
+            MARIADB_PASSWORD: ${DB_PASSWORD:?}
+            MARIADB_RANDOM_ROOT_PASSWORD: true
+            MARIADB_DATABASE: ${DB_NAME:-directus}
+        restart: unless-stopped
+        healthcheck:
+            test:
+                ["CMD", "/usr/local/bin/healthcheck.sh", "--innodb_initialized"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+
+    phpmyadmin:
+        image: phpmyadmin
+        container_name: ${COMPOSE_PROJECT_NAME}-phpmyadmin
+        environment:
+            PMA_HOST: db
+            PMA_ABSOLUTE_URI: http://${DOMAIN:-localhost}/phpmyadmin/
+        labels:
+            caddy: ${DOMAIN:-localhost}
+            caddy.redir: "/phpmyadmin /phpmyadmin/"
+            caddy.handle_path: /phpmyadmin/*
+            caddy.handle_path.reverse_proxy: "{{ upstreams 80 }}"
+        depends_on:
+            db:
+                condition: service_healthy
+
+volumes:
+    caddy-data:
+    db-data:

@@ -1,0 +1,28 @@
+{
+  "image": "node:lts",
+  "features": {
+    "ghcr.io/devcontainers/features/common-utils": {
+      "installZsh": false
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.formatOnSave": true,
+        "files.exclude": {
+          "node_modules/": true
+        },
+        "markdownlint.run": "onSave",
+        "prettier.enable": true
+      },
+      "extensions": [
+        "DavidAnson.vscode-markdownlint",
+        "donjayamanne.githistory",
+        "editorconfig.editorconfig",
+        "esbenp.prettier-vscode",
+        "remcohaszing.schemastore"
+      ]
+    }
+  }
+}
