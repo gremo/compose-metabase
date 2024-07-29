@@ -20,6 +20,8 @@ services:
         container_name: ${COMPOSE_PROJECT_NAME}-php
         volumes:
             - ./:/var/www/html
+        environment:
+            PHP_EXTENSIONS: ${PHP_EXTENSIONS:-@composer}
         labels:
             caddy: localhost
             caddy.root: "* /var/www/html/public"
@@ -27,6 +29,22 @@ services:
             caddy.encode: zstd gzip
             caddy.file_server:
         restart: unless-stopped
+        command:
+            - /bin/sh
+            - -c
+            - |
+                set -e
+
+                if [ ! -f /usr/local/bin/install-php-extensions ]; then
+                    curl -sSLf -o /usr/local/bin/install-php-extensions https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions
+                    chmod +x /usr/local/bin/install-php-extensions
+                fi
+
+                if [ -n "$$PHP_EXTENSIONS" ]; then
+                    install-php-extensions $$PHP_EXTENSIONS
+                fi
+
+                exec php-fpm
         depends_on:
             db:
                 condition: service_healthy
@@ -54,6 +72,8 @@ services:
         container_name: ${COMPOSE_PROJECT_NAME}-phpmyadmin
         environment:
             PMA_HOST: db
+            PMA_USER: ${DB_USER:-php}
+            PMA_PASSWORD: ${DB_PASSWORD:?}
             PMA_ABSOLUTE_URI: http://${DOMAIN:-localhost}/phpmyadmin/
         labels:
             caddy: ${DOMAIN:-localhost}

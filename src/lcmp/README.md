@@ -39,12 +39,13 @@ mkdir public && echo "<?php phpinfo();" > public/index.php
 
 Supported variables:
 
-| Variable      | Required | Default   | Description                         |
-| ------------- | :------: | --------- | ----------------------------------- |
-| `DOMAIN`      |          | localhost | The domain name                     |
-| `DB_USER`     |          | php       | User for the `DB_NAME` database     |
-| `DB_PASSWORD` |    Y     |           | Password for the `DB_NAME` database |
-| `DB_NAME`     |          | app       | Database name                       |
+| Variable         | Required | Default   | Description                         |
+| ---------------- | :------: | --------- | ----------------------------------- |
+| `DOMAIN`         |          | localhost | The domain name                     |
+| `DB_USER`        |          | php       | User for the `DB_NAME` database     |
+| `DB_PASSWORD`    |    Y     |           | Password for the `DB_NAME` database |
+| `DB_NAME`        |          | app       | Database name                       |
+| `PHP_EXTENSIONS` |          | @composer | PHP extensions to install           |
 
 ## 🌐 Endpoints
 
