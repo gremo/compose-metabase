@@ -19,7 +19,7 @@ touch .env
 Create a test script in the `public/` directory:
 
 ```bash
-mkdir public && echo "<?php phpinfo()" > public/index.php
+mkdir public && echo "<?php phpinfo();" > public/index.php
 ```
 
 > [!Tip]
